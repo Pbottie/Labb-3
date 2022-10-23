@@ -52,7 +52,7 @@ namespace Labb_3
             }
             catch (Exception ex)
             {
-                MessageBox.Show(ex.Message + "\nAvslutar", "Fel", MessageBoxButton.OK, MessageBoxImage.Stop);
+                MessageBox.Show(ex.Message + "\nAvslutar applikationen", "Fel", MessageBoxButton.OK, MessageBoxImage.Stop);
                 System.Windows.Application.Current.Shutdown();
             }
 
@@ -61,7 +61,7 @@ namespace Labb_3
 
 
         }
-       
+
         void sortBookings()
         {
             bookings = bookings.OrderBy(booking => booking.Date).
@@ -109,13 +109,13 @@ namespace Labb_3
                 string fileName = dlg.FileName;
                 try
                 {
-                loadBookings(fileName);
+                    loadBookings(fileName);
 
                 }
                 catch (Exception ex)
                 {
 
-                    MessageBox.Show("Fel vid öppnande av " + fileName);
+                    MessageBox.Show("Fel vid öppnande av " + fileName + "\n\n" + ex.Message, "Fel", MessageBoxButton.OK, MessageBoxImage.Error);
 
                 }
             }
@@ -229,8 +229,7 @@ namespace Labb_3
 
                 }
                 else
-                {
-                    MessageBox.Show(fileName + " innehåller fel!");
+                {                    
                     throw new Exception("Bokningsfilen har dubletter eller för många bokningar vid ett klockslag!");
                 }
 
