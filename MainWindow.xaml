@@ -14,7 +14,7 @@
 
         <Grid x:Name="Make_Show_Booking" Grid.Column="0" Margin="3,3,3,3">
             <Grid.RowDefinitions>
-                <RowDefinition Height="350"/>
+                <RowDefinition Height="*" MinHeight="150"/>
                 <RowDefinition MaxHeight="100" MinHeight="50"/>
             </Grid.RowDefinitions>
 
@@ -38,7 +38,9 @@
                     <Label x:Name="name" Grid.Column="1" Content="Namn" Margin="5,5,5,0"/>
                     <TextBox x:Name="nameBox" Grid.Column="1" TextWrapping="Wrap" Text="" Margin="5,0,5,5" Height="25"/>
                     <Label x:Name="table" Grid.Column="1" Content="Bord" Margin="5,5,5,0"/>
-                    <ComboBox x:Name="tableBox" Grid.Column="1" Margin="5,0,5,5"/>
+                    <ComboBox x:Name="tableBox" Grid.Column="1" Margin="5,0,5,5"/> 
+                    <Label x:Name="seat" Grid.Column="1" Content="Platser" Margin="5,5,5,0"/>
+                    <ComboBox x:Name="seatBox" Grid.Column="1" Margin="5,0,5,5"/>
                 </StackPanel>
             </Grid>
 
@@ -55,7 +57,7 @@
             </Grid>
 
         </Grid>
-        <ListBox x:Name="listBoxBookings" Grid.Column="1" Margin="5,5,5,5" FontSize="20" />
+        <ListBox x:Name="listBoxBookings" Grid.Column="1" Margin="5,5,5,5" FontSize="20" PreviewKeyDown="deleteBooking"/>
 
     </Grid>
 

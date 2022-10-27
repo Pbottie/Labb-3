@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Windows;
+using System.Windows.Input;
 
 namespace Labb_3
 {
@@ -13,8 +14,9 @@ namespace Labb_3
     public partial class MainWindow : Window
     {
         const int OPENAT = 12;
-        const string BOOKINGSFILENAME = "Bookings.txt";
+        const string BOOKINGSFILENAME = "BookingsWithSeats.txt";
         string[] tables = { "1", "2", "3", "4", "5", "6", "7", "8" };
+        int[] seats = { 1, 2, 3, 4, 5 };
         string[] openingHours = new string[11];
         List<TableBooking> bookings = new();
 
@@ -26,6 +28,8 @@ namespace Labb_3
             #region Initialize data
             tableBox.ItemsSource = tables;
             tableBox.SelectedIndex = 0;
+            seatBox.ItemsSource = seats;
+            seatBox.SelectedIndex = 0;
 
             for (int i = 0; i < openingHours.Length; i++)
             {
@@ -35,10 +39,10 @@ namespace Labb_3
             timeBox.ItemsSource = openingHours;
             timeBox.SelectedIndex = 0;
 
-            bookings.Add(new TableBooking("2022-10-21", "14:00", "Karl", "3"));
-            bookings.Add(new TableBooking("2022-11-22", "15:00", "Mina", "1"));
-            bookings.Add(new TableBooking("2022-10-21", "14:00", "Bengt", "4"));
-            bookings.Add(new TableBooking("2022-10-01", "12:00", "Sara", "8"));
+            bookings.Add(new TableBooking("2022-10-21", "14:00", "Karl", "3", 3));
+            bookings.Add(new TableBooking("2022-11-22", "15:00", "Mina", "1", 4));
+            bookings.Add(new TableBooking("2022-10-21", "14:00", "Bengt", "4", 2));
+            bookings.Add(new TableBooking("2022-10-01", "12:00", "Sara", "8", 5));
             sortBookings();
             listBoxBookings.ItemsSource = bookings;
 
@@ -148,12 +152,14 @@ namespace Labb_3
         private void bookTable(object sender, RoutedEventArgs e)
         {
             TableBooking bookingToAdd = null;
+            int addingSeats = Int32.Parse(seatBox.Text);
             try
             {
                 bookingToAdd = new TableBooking(datePickerBox.Text,
                    timeBox.Text,
                    nameBox.Text,
-                   tableBox.Text);
+                   tableBox.Text,
+                   addingSeats);
             }
             catch (Exception ex)
             {
@@ -163,23 +169,20 @@ namespace Labb_3
 
             if (bookingToAdd != null)
             {
-                if (bookings.Exists(booking => booking.Compare == bookingToAdd.Compare))
-                    MessageBox.Show("Bordet är redan bokat vid denna tid!", "Fel", MessageBoxButton.OK, MessageBoxImage.Error);
-                else
-                {
-                    int bookingsAtSameTime = bookings.
-                        Select(booking => booking).
-                        Where(booking => booking.Date == bookingToAdd.Date && booking.Time == bookingToAdd.Time).
-                        Count();
 
-                    if (bookingsAtSameTime > 4)
-                        MessageBox.Show("För många bokningar denna tid!", "Fel", MessageBoxButton.OK, MessageBoxImage.Error);
-                    else
-                        bookings.Add(bookingToAdd);
-                    sortBookings();
-                    updateListBoxBinding();
-                    writeBookings();
-                }
+                int seatsAtSameTime = bookings
+                    .Where(booking => booking.Compare.Equals(bookingToAdd.Compare))
+                    .Sum(booking => booking.Seats);
+                    
+
+                if (seatsAtSameTime + addingSeats > 5)
+                    MessageBox.Show("Inte tillräckligt med platser kvar för denna tid!", "Fel", MessageBoxButton.OK, MessageBoxImage.Error);
+                else
+                    bookings.Add(bookingToAdd);
+                sortBookings();
+                updateListBoxBinding();
+                writeBookings();
+
             }
 
 
@@ -204,20 +207,21 @@ namespace Labb_3
 
             if (input != null)
             {
-                Regex regex = new Regex(@"^2[0-9][0-9][0-9]-([0][1-9]|[1][0-2])-([0][1-9]|[1-2][0-9]|[3][0-1])\s+([0-1][0-9]|[2][0-4]):00\s+[a-zA-Z]+\s+\d$");
                 List<TableBooking> loadedBookings = new();
 
                 foreach (string line in input)
                 {
-                    if (regex.IsMatch(line))
+                    try
                     {
-                        string[] args = line.Split(' ');
-                        loadedBookings.Add(new TableBooking(args[0], args[1], args[2], args[3]));
+                        loadedBookings.Add(new TableBooking(line));
                     }
-                    else
+                    catch (Exception ex)
                     {
-                        MessageBox.Show(line + " är inte en giltig bokning.\n" + "Använd formatet: YYYY-MM-DD HH:MM Namn Bordsnummer");
+                        MessageBox.Show(ex.Message, "Fel", MessageBoxButton.OK, MessageBoxImage.Error);
+
                         throw new Exception("Bokningsfilen innehåller fel!");
+
+
                     }
                 }
 
@@ -229,8 +233,8 @@ namespace Labb_3
 
                 }
                 else
-                {                    
-                    throw new Exception("Bokningsfilen har dubletter eller för många bokningar vid ett klockslag!");
+                {
+                    throw new Exception("Bokningsfilen har för många platsbokningar vid ett klockslag!");
                 }
 
 
@@ -245,17 +249,18 @@ namespace Labb_3
         bool isValidBookingList(List<TableBooking> bookingList)
         {
 
-            var dateTimeQuery = bookingList.
-                Select(booking => booking.Date + booking.Time).
-                GroupBy(dateTime => dateTime).
-                Select(group => group.Count()).
-                ToList();
+            var groupSeatingQuery = bookingList.
+                Select(booking => booking)
+                .GroupBy(booking => booking.Compare)
+                .Where(group => group.Count() > 1)
+                .Select(item => new
+                {
+                    Sum = item.Sum(booking => booking.Seats)
+                })
+                .ToList();
 
-            var checkDuplicateQuery = bookingList.
-                GroupBy(booking => booking.Compare).
-                Where(group => group.Count() > 1);
 
-            if (dateTimeQuery.Exists(count => count > 5) || checkDuplicateQuery.Count() > 0)
+            if (groupSeatingQuery.Exists(seating => seating.Sum > 5))
             {
                 return false;
             }
@@ -270,5 +275,11 @@ namespace Labb_3
 
         }
 
+        private void deleteBooking(object sender, System.Windows.Input.KeyEventArgs e)
+        {
+            if (e.Key == Key.Delete)
+                removeBooking(sender,e);
+            
+        }
     }
 }
